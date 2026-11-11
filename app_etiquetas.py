@@ -1,23 +1,12 @@
 import os
 import re
-import io
 import streamlit as st
-
-# Importações protegidas do ReportLab
-try:
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, KeepTogether, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-except ModuleNotFoundError:
-    st.error("O servidor está instalando os componentes de PDF. Por favor, clique em 'Manage App' no canto inferior direito e selecione 'Reboot App' para ativar.")
-    st.stop()
 
 # Configuração da página do navegador
 st.set_page_config(page_title="MMYMI - Etiquetas de Vitrine", page_icon="🏷️", layout="wide")
 
 st.title("🏷️ Gerador de Etiquetas de Vitrine - Layout Oficial 18X")
-st.markdown("Cole o texto do WhatsApp abaixo para gerar o PDF com as etiquetas idênticas ao modelo da loja.")
+st.markdown("Cole o texto do WhatsApp abaixo. O sistema gerará a folha de etiquetas pronta em tamanho A4 para impressão.")
 
 texto_padrao = """TROCA DE PREÇO 05.11.26
 
@@ -54,7 +43,7 @@ for linha in linhas:
         total_float = float(preco_limpo)
         parcela_float = total_float / 18
         
-        txt_total = f"R${total_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        txt_total = f"R$ {total_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         txt_parcela = f"{parcela_float:.2f}".replace(".", ",")
         
         produtos_etiquetas.append({
@@ -66,126 +55,147 @@ for linha in linhas:
         continue
 
 if produtos_etiquetas:
-    st.success(f"Sucesso! {len(produtos_etiquetas)} produtos processados.")
-    st.table(produtos_etiquetas)
+    st.success(f"{len(produtos_etiquetas)} produtos prontos para impressão.")
     
-    pdf_buffer = io.BytesIO()
-    # Configuração de folha A4 com margens seguras para 12 etiquetas (grade 3x4)
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=20, leftMargin=20, topMargin=25, bottomMargin=20)
-    story = []
-    
-    # Cores exatas do modelo da loja
-    COR_LARANJA = colors.HexColor("#FF8C00")
-    COR_PRETO = colors.HexColor("#000000")
-    
-    # Estilos de fontes milimetricamente ajustados
-    style_nome = ParagraphStyle('Nome', fontName='Helvetica-Bold', fontSize=9, textColor=colors.white, alignment=1, leading=10)
-    style_18x = ParagraphStyle('Txt18x', fontName='Helvetica-Bold', fontSize=18, textColor=COR_LARANJA, alignment=0, leading=18)
-    style_parcela = ParagraphStyle('TxtParc', fontName='Helvetica-Bold', fontSize=18, textColor=colors.white, alignment=0, leading=18)
-    style_selo_txt = ParagraphStyle('TxtSelo', fontName='Helvetica-Bold', fontSize=5, textColor=colors.white, alignment=1, leading=6)
-    style_total = ParagraphStyle('TxtTotal', fontName='Helvetica-Bold', fontSize=11, textColor=COR_PRETO, alignment=0, leading=11)
-    style_sem_juros = ParagraphStyle('TxtSJ', fontName='Helvetica-Bold', fontSize=11, textColor=COR_PRETO, alignment=2, leading=11)
+    # Injeta a folha de estilo que desenha a etiqueta idêntica ao modelo físico enviado
+    st.markdown("""
+        <style>
+        @media print {
+            header, footer, [data-testid="stSidebar"], [data-testid="stDecoration"], .stTextArea, .stAlert, h1, p, hr {
+                display: none !important;
+            }
+            .stMainBlockContainer {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .grade-principal {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 10px !important;
+                padding: 10px !important;
+            }
+        }
+        .grade-principal {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            background-color: #ffffff;
+        }
+        .etiqueta-loja {
+            border: 2px solid #FF8C00;
+            background-color: #000000;
+            font-family: 'Arial Black', sans-serif;
+            overflow: hidden;
+            width: 100%;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+        .faixa-laranja-topo {
+            background-color: #FF8C00;
+            color: #ffffff;
+            text-align: center;
+            padding: 6px 4px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-bottom: 2px solid #ffffff;
+            letter-spacing: 0.5px;
+        }
+        .bloco-centro-preto {
+            background-color: #000000;
+            padding: 8px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .texto-18x-bold {
+            color: #FF8C00;
+            font-size: 26px;
+            font-weight: 900;
+            font-style: italic;
+            margin-right: 4px;
+        }
+        .texto-rs-white {
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: bold;
+            vertical-align: super;
+            margin-right: 2px;
+        }
+        .texto-valor-parcela {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 900;
+            font-style: italic;
+        }
+        .selo-cartao-credito {
+            background-color: #FF8C00;
+            color: #000000;
+            font-size: 6px;
+            font-weight: 900;
+            text-align: center;
+            padding: 3px;
+            line-height: 7px;
+            border-radius: 2px;
+            width: 65px;
+        }
+        .selo-cartao-credito span {
+            color: #ffffff;
+            display: block;
+        }
+        .faixa-inferior-diagonal {
+            background: linear-gradient(135deg, #FF8C00 50%, #FF8C00 50%, #FF9900 50.1%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            border-top: 1px solid #ffffff;
+        }
+        .preco-total-riscado {
+            color: #000000;
+            font-size: 14px;
+            font-weight: 900;
+            background-color: #FF9900;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .texto-sem-juros-tarja {
+            color: #000000;
+            font-size: 14px;
+            font-weight: 900;
+            font-style: italic;
+            text-shadow: 0.5px 0.5px 0px #ffffff;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Dimensões da etiqueta física (em pontos de PDF)
-    LARGURA_ETIQUETA = 5.8 * 28.346  
-    ALTURA_CABECALHO = 0.5 * 28.346
-    ALTURA_CENTRAL = 1.1 * 28.346
-    ALTURA_RODAPE = 0.5 * 28.346
-    
-    lista_etiquetas_finais = []
-    
+    # Monta a estrutura da grade 3x4 idêntica à foto
+    html_etiquetas = '<div class="grade-principal">'
     for p in produtos_etiquetas:
-        # 1. LINHA SUPERIOR (Nome do Produto em fundo Laranja)
-        row1 = Table([[Paragraph(p['nome'], style_nome)]], colWidths=[LARGURA_ETIQUETA], rowHeights=[ALTURA_CABECALHO])
-        row1.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-        ]))
-        
-        # Selo interno "NO CARTÃO DE CRÉDITO" com fundo Laranja
-        selo_interno = Table([
-            [Paragraph("NO CARTÃO", style_selo_txt)],
-            [Paragraph("DE CRÉDITO", style_selo_txt)]
-        ], colWidths=[LARGURA_ETIQUETA * 0.26], rowHeights=[7, 7])
-        selo_interno.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ]))
-        
-        # 2. LINHA CENTRAL (Fundo Preto com Parcelamento e o Selo)
-        conteudo_centro = [
-            Paragraph(f"18X R$", style_18x),
-            Paragraph(p['parcela'], style_parcela),
-            selo_interno
-        ]
-        row2 = Table([conteudo_centro], colWidths=[LARGURA_ETIQUETA * 0.36, LARGURA_BLOCO_LARGURA * 0.36 if 'LARGURA_BLOCO_LARGURA' in locals() else LARGURA_ETIQUETA * 0.36, LARGURA_ETIQUETA * 0.28], rowHeights=[ALTURA_CENTRAL])
-        row2.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), COR_PRETO),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('ALIGN', (2,0), (2,0), 'CENTER'),
-            ('LEFTPADDING', (0,0), (-1,-1), 4),
-            ('RIGHTPADDING', (0,0), (-1,-1), 4),
-        ]))
-        
-        # 3. LINHA INFERIOR (Fundo Laranja com Preço Total e SEM JUROS)
-        conteudo_rodape = [
-            Paragraph(p['total'], style_total),
-            Paragraph("SEM JUROS", style_sem_juros)
-        ]
-        row3 = Table([conteudo_rodape], colWidths=[LARGURA_ETIQUETA * 0.5, LARGURA_ETIQUETA * 0.5], rowHeights=[ALTURA_RODAPE])
-        row3.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 6),
-            ('RIGHTPADDING', (0,0), (-1,-1), 6),
-        ]))
-        
-        # EMPACOTAMENTO DA ETIQUETA COMPLETA
-        etiqueta_montada = Table([[row1], [row2], [row3]], colWidths=[LARGURA_ETIQUETA], rowHeights=[ALTURA_CABECALHO, ALTURA_CENTRAL, ALTURA_RODAPE])
-        etiqueta_montada.setStyle(TableStyle([
-            ('BOX', (0,0), (-1,-1), 1.5, COR_LARANJA), # Contorno externo laranja
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ]))
-        
-        lista_etiquetas_finais.append(etiqueta_montada)
-        
-    # Organização matemática da grade (3 Colunas por Linha fixas)
-    grade_linhas = []
-    for idx in range(0, len(lista_etiquetas_finais), 3):
-        trio = lista_etiquetas_finais[idx:idx+3]
-        while len(trio) < 3:
-            trio.append(Spacer(1, LARGURA_ETIQUETA))
-        grade_linhas.append(trio)
-        
-    tabela_mestre = Table(grade_linhas, colWidths=[LARGURA_ETIQUETA, LARGURA_ETIQUETA, LARGURA_ETIQUETA])
-    tabela_mestre.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),  # Margem para guilhotina horizontal
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 16), # Margem para guilhotina vertical
-        ('TOPPADDING', (0,0), (-1,-1), 16),
-    ]))
+        html_etiquetas += f"""
+        <div class="etiqueta-loja">
+            <div class="faixa-laranja-topo">{p['nome']}</div>
+            <div class="bloco-centro-preto">
+                <div>
+                    <span class="texto-18x-bold">18X</span>
+                    <span class="texto-rs-white">R$</span>
+                    <span class="texto-valor-parcela">{p['parcela']}</span>
+                </div>
+                <div class="selo-cartao-credito">
+                    NO CARTÃO
+                    <span>DE CRÉDITO</span>
+                </div>
+            </div>
+            <div class="faixa-inferior-diagonal">
+                <div class="preco-total-riscado">{p['total']}</div>
+                <div class="texto-sem-juros-tarja">SEM JUROS</div>
+            </div>
+        </div>
+        """
+    html_etiquetas += '</div>'
     
-    story.append(KeepTogether([tabela_mestre]))
-    doc.build(story)
+    st.markdown(html_etiquetas, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.subheader("📥 Exportar Resultados")
-    st.download_button(
-        label="📥 Clique aqui para baixar o PDF Oficial de Etiquetas (Grade 3x4)",
-        data=pdf_buffer.getvalue(),
-        file_name="folha_etiquetas_18x_oficial.pdf",
-        mime="application/pdf",
-        use_container_width=True
-    )
+    st.warning("🖨️ **COMO IMPRIMIR / SALVAR EM PDF:** Pressione **Ctrl + P** no teclado do computador. Na tela que abrir, mude o destino para **'Salvar como PDF'** ou selecione a sua impressora física de etiquetas.")
