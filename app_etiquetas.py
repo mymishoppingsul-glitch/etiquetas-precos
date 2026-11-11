@@ -1,4 +1,8 @@
 import os
+import sys
+# FORÇA A INSTALAÇÃO DO REPORTLAB DIRETO PELO CÓDIGO SE O SERVIDOR IGNORAR O REQUIREMENTS
+os.system(f"{sys.executable} -m pip install reportlab pypdf")
+
 import re
 import io
 import streamlit as st
