@@ -1,4 +1,3 @@
-import os
 import re
 import streamlit as st
 
@@ -6,7 +5,7 @@ import streamlit as st
 st.set_page_config(page_title="MMYMI - Etiquetas de Vitrine", page_icon="🏷️", layout="wide")
 
 st.title("🏷️ Gerador de Etiquetas de Vitrine - Layout Oficial 18X")
-st.markdown("Cole o texto do WhatsApp abaixo. O sistema gerará a folha de etiquetas pronta em tamanho A4 para impressão.")
+st.markdown("Cole o texto do WhatsApp abaixo para gerar o painel com as etiquetas idênticas ao modelo da loja.")
 
 texto_padrao = """TROCA DE PREÇO 05.11.26
 
@@ -43,7 +42,7 @@ for linha in linhas:
         total_float = float(preco_limpo)
         parcela_float = total_float / 18
         
-        txt_total = f"R$ {total_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        txt_total = f"R${total_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         txt_parcela = f"{parcela_float:.2f}".replace(".", ",")
         
         produtos_etiquetas.append({
@@ -55,9 +54,9 @@ for linha in linhas:
         continue
 
 if produtos_etiquetas:
-    st.success(f"{len(produtos_etiquetas)} produtos prontos para impressão.")
+    st.success(f"Sucesso! {len(produtos_etiquetas)} produtos processados.")
     
-    # Injeta a folha de estilo que desenha a etiqueta idêntica ao modelo físico enviado
+    # CSS avançado para replicar exatamente o design geométrico e as cores do PDF
     st.markdown("""
         <style>
         @media print {
@@ -71,125 +70,128 @@ if produtos_etiquetas:
             .grade-principal {
                 display: grid !important;
                 grid-template-columns: repeat(3, 1fr) !important;
-                gap: 10px !important;
+                gap: 15px !important;
                 padding: 10px !important;
+                page-break-inside: avoid !important;
             }
         }
         .grade-principal {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            gap: 20px;
             margin-top: 20px;
             background-color: #ffffff;
         }
-        .etiqueta-loja {
+        .etiqueta-container {
             border: 2px solid #FF8C00;
             background-color: #000000;
-            font-family: 'Arial Black', sans-serif;
-            overflow: hidden;
+            font-family: 'Arial Black', 'Impact', sans-serif;
             width: 100%;
-            max-width: 280px;
-            margin: 0 auto;
+            box-sizing: border-box;
         }
-        .faixa-laranja-topo {
+        .etiqueta-topo-laranja {
             background-color: #FF8C00;
             color: #ffffff;
             text-align: center;
-            padding: 6px 4px;
-            font-size: 11px;
+            padding: 8px 4px;
+            font-size: 13px;
             font-weight: 900;
             text-transform: uppercase;
             border-bottom: 2px solid #ffffff;
             letter-spacing: 0.5px;
         }
-        .bloco-centro-preto {
+        .etiqueta-meio-preto {
             background-color: #000000;
-            padding: 8px 10px;
+            padding: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 2px solid #ffffff;
         }
-        .texto-18x-bold {
+        .bloco-18x-valores {
+            display: flex;
+            align-items: baseline;
+        }
+        .txt-18x {
             color: #FF8C00;
-            font-size: 26px;
+            font-size: 32px;
             font-weight: 900;
             font-style: italic;
             margin-right: 4px;
         }
-        .texto-rs-white {
+        .txt-rs {
             color: #ffffff;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: bold;
-            vertical-align: super;
-            margin-right: 2px;
+            margin-right: 3px;
         }
-        .texto-valor-parcela {
+        .txt-valor {
             color: #ffffff;
-            font-size: 28px;
+            font-size: 36px;
             font-weight: 900;
             font-style: italic;
         }
-        .selo-cartao-credito {
+        .bloco-selo-cartao {
             background-color: #FF8C00;
             color: #000000;
-            font-size: 6px;
+            font-size: 7px;
             font-weight: 900;
             text-align: center;
-            padding: 3px;
-            line-height: 7px;
+            padding: 4px 6px;
+            line-height: 8px;
             border-radius: 2px;
-            width: 65px;
+            min-width: 70px;
         }
-        .selo-cartao-credito span {
+        .bloco-selo-cartao span {
             color: #ffffff;
             display: block;
         }
-        .faixa-inferior-diagonal {
-            background: linear-gradient(135deg, #FF8C00 50%, #FF8C00 50%, #FF9900 50.1%);
+        .etiqueta-rodape-laranja {
+            background-color: #FF8C00;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 10px;
-            border-top: 1px solid #ffffff;
+            padding: 8px 10px;
         }
-        .preco-total-riscado {
+        .txt-total-bold {
             color: #000000;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 900;
-            background-color: #FF9900;
-            padding: 2px 6px;
-            border-radius: 4px;
+            background-color: #FFA500;
+            padding: 2px 8px;
+            border-radius: 3px;
+            letter-spacing: -0.5px;
         }
-        .texto-sem-juros-tarja {
+        .txt-sem-juros-bold {
             color: #000000;
-            font-size: 14px;
+            font-size: 18px;
             font-weight: 900;
             font-style: italic;
-            text-shadow: 0.5px 0.5px 0px #ffffff;
+            letter-spacing: 0.5px;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Monta a estrutura da grade 3x4 idêntica à foto
+    # Constrói o HTML puro com o mapeamento exato das posições visuais
     html_etiquetas = '<div class="grade-principal">'
     for p in produtos_etiquetas:
         html_etiquetas += f"""
-        <div class="etiqueta-loja">
-            <div class="faixa-laranja-topo">{p['nome']}</div>
-            <div class="bloco-centro-preto">
-                <div>
-                    <span class="texto-18x-bold">18X</span>
-                    <span class="texto-rs-white">R$</span>
-                    <span class="texto-valor-parcela">{p['parcela']}</span>
+        <div class="etiqueta-container">
+            <div class="etiqueta-topo-laranja">{p['nome']}</div>
+            <div class="etiqueta-meio-preto">
+                <div class="bloco-18x-valores">
+                    <span class="txt-18x">18X</span>
+                    <span class="txt-rs">R$</span>
+                    <span class="txt-valor">{p['parcela']}</span>
                 </div>
-                <div class="selo-cartao-credito">
+                <div class="bloco-selo-cartao">
                     NO CARTÃO
                     <span>DE CRÉDITO</span>
                 </div>
             </div>
-            <div class="faixa-inferior-diagonal">
-                <div class="preco-total-riscado">{p['total']}</div>
-                <div class="texto-sem-juros-tarja">SEM JUROS</div>
+            <div class="etiqueta-rodape-laranja">
+                <div class="txt-total-bold">{p['total']}</div>
+                <div class="txt-sem-juros-bold">SEM JUROS</div>
             </div>
         </div>
         """
@@ -198,4 +200,4 @@ if produtos_etiquetas:
     st.markdown(html_etiquetas, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.warning("🖨️ **COMO IMPRIMIR / SALVAR EM PDF:** Pressione **Ctrl + P** no teclado do computador. Na tela que abrir, mude o destino para **'Salvar como PDF'** ou selecione a sua impressora física de etiquetas.")
+    st.info("🖨️ **COMO SALVAR OU IMPRIMIR:** Pressione **Ctrl + P** no teclado. Mude o destino para **'Salvar como PDF'** ou envie para sua impressora física.")
