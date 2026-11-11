@@ -1,17 +1,11 @@
-import os
 import re
-import io
 import streamlit as st
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, KeepTogether, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
 
-# Configuração da página
+# Configuração da página do navegador
 st.set_page_config(page_title="Gerador de Etiquetas", page_icon="🏷️", layout="wide")
 
 st.title("🏷️ Gerador de Etiquetas de Preço - 18x Sem Juros")
-st.markdown("Cole a lista de preços do WhatsApp abaixo para gerar a folha de etiquetas oficial (Grade 3x4).")
+st.markdown("Cole a lista de preços do WhatsApp abaixo. O sistema calculará as parcelas e montará o layout estruturado.")
 
 texto_padrao = """TROCA DE PREÇO 05.11.26
 
@@ -23,7 +17,7 @@ POCO C85 256/8 - R$1.749,90"""
 
 entrada_texto = st.text_area("Cole as informações do WhatsApp aqui:", value=texto_padrao, height=200)
 
-# Processamento do texto do WhatsApp
+# Processamento do texto do WhatsApp de forma limpa
 linhas = entrada_texto.split('\n')
 produtos_etiquetas = []
 
@@ -61,90 +55,130 @@ for linha in linhas:
         continue
 
 if produtos_etiquetas:
-    st.success(f"{len(produtos_etiquetas)} produtos processados com sucesso!")
-    st.table(produtos_etiquetas)
+    st.success(f"{len(produtos_etiquetas)} produtos processados.")
     
-    # Geração do PDF
-    pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=14, leftMargin=14, topMargin=14, bottomMargin=14)
-    story = []
-    styles = getSampleStyleSheet()
+    # Injeta estilos CSS para garantir que a impressão saia idêntica ao PDF original (Grade 3x4)
+    st.markdown("""
+        <style>
+        @media print {
+            header, footer, [data-testid="stSidebar"], [data-testid="stDecoration"], .stTextArea, .stAlert, h1, p {
+                display: none !important;
+            }
+            .stMainBlockContainer {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .grid-impressao {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 15px !important;
+                page-break-inside: avoid !important;
+            }
+        }
+        .grid-impressao {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .etiqueta-box {
+            border: 3px solid #FF8C00;
+            border-radius: 8px;
+            background-color: white;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        .etiqueta-header {
+            background-color: #FF8C00;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-weight: bold;
+            font-size: 13px;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+        .etiqueta-body {
+            background-color: #000000;
+            padding: 12px;
+            color: white;
+        }
+        .linha-parcela {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .txt-18x {
+            color: #FF8C00;
+            font-size: 26px;
+            font-weight: 900;
+        }
+        .bloco-preco-parc {
+            text-align: right;
+        }
+        .txt-val-parc {
+            color: white;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .txt-sub-cartao {
+            color: #FF8C00;
+            font-size: 7px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-top: -2px;
+        }
+        .linha-rodape {
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .txt-total-original {
+            color: #A0A0A0;
+            font-size: 13px;
+            font-weight: bold;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        .txt-sem-juros {
+            color: #FF8C00;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
     
-    # Estilos Visuais Oficiais
-    style_nome = ParagraphStyle('Et_Nome', fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, alignment=1, leading=9)
-    style_18x = ParagraphStyle('Et_18x', fontName='Helvetica-Bold', fontSize=20, textColor=colors.HexColor("#FF8C00"), alignment=0, leading=20)
-    style_val_parc = ParagraphStyle('Et_ValParc', fontName='Helvetica-Bold', fontSize=16, textColor=colors.white, alignment=2, leading=16)
-    style_sub_cartao = ParagraphStyle('Et_SubCartao', fontName='Helvetica-Bold', fontSize=5, textColor=colors.HexColor("#FF8C00"), alignment=2, leading=5)
-    style_total = ParagraphStyle('Et_Total', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#A0A0A0"), alignment=0, leading=11)
-    style_sem_juros = ParagraphStyle('Et_SemJuros', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#FF8C00"), alignment=2, leading=11)
-
-    # Medidas das caixas (Grade 3x4)
-    LARGURA_BLOCO = 5.8 * 28.346  
-    ALTURA_BLOCO = 5.4 * 28.346   
-    
-    lista_blocos = []
+    # Renderiza a grade estruturada de etiquetas na tela
+    html_grade = '<div class="grid-impressao">'
     for p in produtos_etiquetas:
-        # 1. Parte de cima Laranja
-        tab_cabecalho = Table([[Paragraph(p['nome'], style_nome)]], colWidths=[LARGURA_BLOCO], rowHeights=[18])
-        tab_cabecalho.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#FF8C00")),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-        ]))
-        
-        # 2. Parte de baixo Preta
-        l1 = [Paragraph("18X", style_18x), [Paragraph(p['parcela'], style_val_parc), Paragraph("NO CARTÃO DE CRÉDITO", style_sub_cartao)]]
-        l2 = [Paragraph(f"<strike>{p['total']}</strike>", style_total), Paragraph("SEM JUROS", style_sem_juros)]
-        
-        tab_corpo = Table([l1, l2], colWidths=[LARGURA_BLOCO * 0.35, LARGURA_BLOCO * 0.65], rowHeights=[20, 16])
-        tab_corpo.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), colors.black),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 4),
-            ('RIGHTPADDING', (0,0), (-1,-1), 4),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-        ]))
-        
-        # Junta na etiqueta com contorno laranja igual ao PDF
-        bloco_completo = Table([[tab_cabecalho], [tab_corpo]], colWidths=[LARGURA_BLOCO], rowHeights=[18, 36])
-        bloco_completo.setStyle(TableStyle([
-            ('BOX', (0,0), (-1,-1), 1.5, colors.HexColor("#FF8C00")),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ]))
-        lista_blocos.append(bloco_completo)
-        
-    # Organiza em 3 Colunas por Linha
-    grade_linhas = []
-    for idx in range(0, len(lista_blocos), 3):
-        trio = lista_blocos[idx:idx+3]
-        while len(trio) < 3:
-            trio.append(Spacer(1, LARGURA_BLOCO))
-        grade_linhas.append(trio)
-        
-    tabela_grade_final = Table(grade_linhas, colWidths=[LARGURA_BLOCO, LARGURA_BLOCO, LARGURA_BLOCO])
-    tabela_grade_final.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),  
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 10), 
-        ('TOPPADDING', (0,0), (-1,-1), 10),
-    ]))
+        html_grade += f"""
+        <div class="etiqueta-box">
+            <div class="etiqueta-header">{p['nome']}</div>
+            <div class="etiqueta-body">
+                <div class="linha-parcela">
+                    <span class="txt-18x">18X</span>
+                    <div class="bloco-preco-parc">
+                        <span class="txt-val-parc">{p['parcela']}</span>
+                        <span class="txt-sub-cartao">NO CARTÃO DE CRÉDITO</span>
+                    </div>
+                </div>
+                <div class="linha-rodape">
+                    <span class="txt-total-original">{p['total']}</span>
+                    <span class="txt-sem-juros">SEM JUROS</span>
+                </div>
+            </div>
+        </div>
+        """
+    html_grade += '</div>'
     
-    story.append(KeepTogether([tabela_grade_final]))
-    doc.build(story)
+    st.markdown(html_grade, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.download_button(
-        label="📥 Baixar Folha de Etiquetas em PDF (Grade 3x4 Oficial)",
-        data=pdf_buffer.getvalue(),
-        file_name="folha_etiquetas_18x.pdf",
-        mime="application/pdf",
-        use_container_width=True
-    )
+    st.info("💡 **Para salvar o PDF ou Imprimir:** Pressione **Ctrl + P** no seu teclado (ou clique com o botão direito na página e selecione 'Imprimir'). Na tela de impressão, defina o destino como 'Salvar como PDF' ou escolha a sua impressora física.")
