@@ -1,15 +1,4 @@
 import os
-import sys
-
-# Força a instalação antes de tentar importar qualquer coisa do reportlab
-try:
-    from reportlab.lib.pagesizes import letter
-except ModuleNotFoundError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "reportlab", "pypdf"])
-    # Reinicia o próprio script para o Python reconhecer a instalação na hora
-    os.execv(sys.executable, ['python'] + sys.argv)
-
 import re
 import io
 import streamlit as st
