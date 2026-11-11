@@ -1,24 +1,20 @@
 import os
-import sys
-
-# Garante que o reportlab seja instalado antes do carregamento da página
-try:
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
-except ModuleNotFoundError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "reportlab", "pypdf"])
-    os.execv(sys.executable, ['python'] + sys.argv)
-
 import re
 import io
 import streamlit as st
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, KeepTogether, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
+
+# Importações do ReportLab protegidas
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, KeepTogether, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+except ModuleNotFoundError:
+    st.error("O servidor está instalando os componentes de PDF. Por favor, clique em 'Manage App' no canto inferior direito e selecione 'Reboot App' para ativar.")
+    st.stop()
 
 # Configuração visual do Streamlit
-st.set_page_config(page_title="MMYMI - Etiquetas de Vitrine", page_icon="🏷️", layout="wide")
+st.set_page_config(page_title="MMYMI - Etiqueta de Vitrine", page_icon="🏷️", layout="wide")
 
 st.title("🏷️ Gerador de Etiquetas de Vitrine - Layout Oficial 18X")
 st.markdown("Cole o texto do WhatsApp abaixo para gerar o PDF com as etiquetas idênticas ao modelo da loja.")
@@ -33,7 +29,6 @@ POCO C85 256/8 - R$1.749,90"""
 
 entrada_texto = st.text_area("Cole as informações do WhatsApp aqui:", value=texto_padrao, height=200)
 
-# Processamento do texto do WhatsApp
 linhas = entrada_texto.split('\n')
 produtos_etiquetas = []
 
@@ -71,23 +66,18 @@ for linha in linhas:
         continue
 
 if produtos_etiquetas:
-    st.success(f"Sucesso! {len(produtos_etiquetas)} produtos prontos para gerar etiquetas.")
+    st.success(f"Sucesso! {len(produtos_etiquetas)} produtos prontos.")
     st.table(produtos_etiquetas)
     
-    # Montagem do PDF oficial baseado milimetricamente no design do usuário
     pdf_buffer = io.BytesIO()
-    
-    # Margens ajustadas para a folha A4/Letter comportar a grade de 3 colunas por 4 linhas (12 etiquetas)
     doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=14, leftMargin=14, topMargin=20, bottomMargin=14)
     story = []
     styles = getSampleStyleSheet()
     
-    # Paleta de Cores Oficial do PDF enviado
     COR_LARANJA = colors.HexColor("#FF8C00")
     COR_PRETO = colors.HexColor("#000000")
-    COR_FUNDO_TOTAL = colors.HexColor("#FF9900") # Fundo amarelo/laranja do preço total
+    COR_FUNDO_TOTAL = colors.HexColor("#FF9900")
     
-    # Estilos de Texto Refinados
     style_nome = ParagraphStyle('Nome', fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, alignment=1, leading=9)
     style_18x = ParagraphStyle('V_18x', fontName='Helvetica-Bold', fontSize=18, textColor=COR_LARANJA, alignment=0, leading=18)
     style_rs = ParagraphStyle('V_Rs', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0, leading=10)
@@ -97,15 +87,13 @@ if produtos_etiquetas:
     style_total_original = ParagraphStyle('V_Tot', fontName='Helvetica-Bold', fontSize=12, textColor=COR_PRETO, alignment=1, leading=12)
     style_sem_juros = ParagraphStyle('V_SJ', fontName='Helvetica-Bold', fontSize=13, textColor=COR_PRETO, alignment=1, leading=13)
 
-    # Medidas oficiais da etiqueta física (Grade 3x4)
     LARGURA_BLOCO = 5.8 * 28.346  
-    ALTURA_CORPO = 4.0 * 28.346
     
-    lista_etiquetas_pdf = []
+    lista_blocos_desenhados = []
     
     for p in produtos_etiquetas:
-        # 1. CABEÇALHO LARANJA QUADRADO (Nome do Produto)
-        tab_cabecalho = Table([[Paragraph(p['nome'], style_nome)]], colWidths=[LARGURA_BLOCO], rowHeights=[20])
+        # Cabeçalho com 18 pontos de altura fixa
+        tab_cabecalho = Table([[Paragraph(p['nome'], style_nome)]], colWidths=[LARGURA_BLOCO], rowHeights=[18])
         tab_cabecalho.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -114,11 +102,10 @@ if produtos_etiquetas:
             ('TOPPADDING', (0,0), (-1,-1), 0),
         ]))
         
-        # 2. LINHA DA PARCELA (Fundo Preto: "18X" à esquerda, "R$ valor" à direita, "NO CARTÃO" no detalhe)
         bloco_cartao_detalhe = Table([
             [Paragraph("NO CARTÃO", style_tag_cartao)],
             [Paragraph("DE CRÉDITO", style_sub_cartao)]
-        ], colWidths=[LARGURA_BLOCO*0.4])
+        ], colWidths=[LARGURA_BLOCO * 0.4])
         bloco_cartao_detalhe.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (0,0), COR_LARANJA),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -134,39 +121,35 @@ if produtos_etiquetas:
             bloco_cartao_detalhe
         ]
         
-        tab_linha_1 = Table([linha_parcela_dados], colWidths=[LARGURA_BLOCO*0.22, LARGURA_BLOCO*0.12, LARGURA_BLOCO*0.36, LARGURA_BLOCO*0.30], rowHeights=[24])
+        # Primeira linha preta com 20 pontos de altura
+        tab_linha_1 = Table([linha_parcela_dados], colWidths=[LARGURA_BLOCO * 0.22, LARGURA_BLOCO * 0.12, LARGURA_BLOCO * 0.36, LARGURA_BLOCO * 0.30], rowHeights=[20])
         tab_linha_1.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_PRETO),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('ALIGN', (3,0), (3,0), 'CENTER'),
             ('LEFTPADDING', (0,0), (-1,-1), 2),
             ('RIGHTPADDING', (0,0), (-1,-1), 2),
         ]))
 
-        # 3. LINHA DO PREÇO TOTAL E SEM JUROS (Fundo Laranja/Amarelo com o corte angular do modelo)
-        bloco_total_amarelo = Table([[Paragraph(p['total'], style_total_original)]], colWidths=[LARGURA_BLOCO*0.5], rowHeights=[18])
+        # Linha inferior amarela com 16 pontos de altura
+        bloco_total_amarelo = Table([[Paragraph(p['total'], style_total_original)]], colWidths=[LARGURA_BLOCO * 0.5], rowHeights=[16])
         bloco_total_amarelo.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_FUNDO_TOTAL),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ]))
 
-        linha_rodape_dados = [
-            bloco_total_amarelo,
-            Paragraph("SEM JUROS", style_sem_juros)
-        ]
+        linha_rodape_dados = [bloco_total_amarelo, Paragraph("SEM JUROS", style_sem_juros)]
         
-        tab_linha_2 = Table([linha_rodape_dados], colWidths=[LARGURA_BLOCO*0.5, LARGURA_BLOCO*0.5], rowHeights=[20])
+        tab_linha_2 = Table([linha_rodape_dados], colWidths=[LARGURA_BLOCO * 0.5, LARGURA_BLOCO * 0.5], rowHeights=[16])
         tab_linha_2.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('ALIGN', (1,0), (1,0), 'CENTER'),
             ('LEFTPADDING', (0,0), (-1,-1), 0),
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ]))
 
-        # 4. JUNÇÃO DO CORPO COMPLETO (Linha 1 Preta + Linha 2 Laranja/Amarela)
-        tab_corpo_etiqueta = Table([[tab_linha_1], [tab_linha_2]], colWidths=[LARGURA_BLOCO], rowHeights=[24, 20])
+        # Junta o corpo totalizando 36 pontos de altura
+        tab_corpo_etiqueta = Table([[tab_linha_1], [tab_linha_2]], colWidths=[LARGURA_BLOCO], rowHeights=[20, 16])
         tab_corpo_etiqueta.setStyle(TableStyle([
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ('TOPPADDING', (0,0), (-1,-1), 0),
@@ -174,19 +157,17 @@ if produtos_etiquetas:
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ]))
 
-        # 5. ETIQUETA COMPLETA (Cabeçalho + Corpo com a borda de acabamento)
-        bloco_final_individual = Table([[tab_cabecalho], [tab_corpo_etiqueta]], colWidths=[LARGURA_BLOCO], rowHeights=[20, 44])
+        # Une Cabeçalho (18) + Corpo (36) = 54 pontos de altura total por etiqueta
+        bloco_final_individual = Table([[tab_cabecalho], [tab_corpo_etiqueta]], colWidths=[LARGURA_BLOCO], rowHeights=[18, 36])
         bloco_final_individual.setStyle(TableStyle([
-            ('BOX', (0,0), (-1,-1), 2, COR_LARANJA), # Borda laranja grossa externa igualzinha ao PDF
+            ('BOX', (0,0), (-1,-1), 1.5, colors.HexColor("#FF8C00")),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ('TOPPADDING', (0,0), (-1,-1), 0),
             ('LEFTPADDING', (0,0), (-1,-1), 0),
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ]))
-        
         lista_blocos_desenhados.append(bloco_final_individual)
         
-    # Agrupa as etiquetas criadas em uma grade perfeita de 3 colunas por linha
     grade_linhas_finais = []
     for idx in range(0, len(lista_blocos_desenhados), 3):
         trio = lista_blocos_desenhados[idx:idx+3]
@@ -194,14 +175,13 @@ if produtos_etiquetas:
             trio.append(Spacer(1, LARGURA_BLOCO))
         grade_linhas_finais.append(trio)
         
-    # Tabela mestre que controla as distâncias de corte da folha A4 (12 por página)
     tabela_grade_impressao = Table(grade_linhas_finais, colWidths=[LARGURA_BLOCO, LARGURA_BLOCO, LARGURA_BLOCO])
     tabela_grade_impressao.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),  # Distância perfeita para passar a guilhotina entre colunas
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),  
         ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 14), # Distância perfeita para passar a guilhotina entre linhas
+        ('BOTTOMPADDING', (0,0), (-1,-1), 14), 
         ('TOPPADDING', (0,0), (-1,-1), 14),
     ]))
     
