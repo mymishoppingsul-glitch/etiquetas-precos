@@ -13,10 +13,10 @@ except ModuleNotFoundError:
     st.stop()
 
 # Configuração da página do navegador
-st.set_page_config(page_title="MMYMI - Etiquetas Oficiais", page_icon="🏷️", layout="wide")
+st.set_page_config(page_title="MYMI STORE - Etiquetas", page_icon="🏷️", layout="wide")
 
-st.title("🏷️ Gerador de Etiquetas de Vitrine - Correção de Layout")
-st.markdown("Cole o texto do WhatsApp abaixo para gerar o PDF com o design idêntico ao modelo reto da tela.")
+st.title("🏷️ Gerador de Etiquetas de Vitrine - Padrão MYMI STORE")
+st.markdown("Cole o texto do WhatsApp abaixo para gerar o PDF com as etiquetas ampliadas, limpas e com a logo oficial.")
 
 texto_padrao = """TROCA DE PREÇO 05.11.26
 
@@ -33,45 +33,47 @@ produtos_etiquetas = []
 
 for linha in linhas:
     linha = linha.strip()
-    if not linha or "TROCA DE PREÇO" in linha.upper():
-        continue
-    
-    if "-" in linha:
-        partes = linha.split("-")
-        nome_prod = partes[0].strip().upper()
-        preco_str = partes[1].strip()
-    else:
-        match = re.search(r'(.*?)(?:R\$)?\s*([\d\.,]+)$', linha)
-        if match:
-            nome_prod = match.group(1).strip().upper()
-            preco_str = match.group(2).strip()
-        else:
+    if not empty_line := not linha or "TROCA DE PREÇO" in linha.upper():
+        if empty_line:
             continue
+        
+        if "-" in linha:
+            partes = linha.split("-")
+            nome_prod = partes[0].strip().upper()
+            preco_str = partes[1].strip()
+        else:
+            match = re.search(r'(.*?)(?:R\$)?\s*([\d\.,]+)$', linha)
+            if match:
+                nome_prod = match.group(1).strip().upper()
+                preco_str = match.group(2).strip()
+            else:
+                continue
+                
+        preco_limpo = preco_str.replace("R$", "").replace(".", "").replace(",", ".").strip()
+        try:
+            total_float = float(preco_limpo)
+            parcela_float = total_float / 18
             
-    preco_limpo = preco_str.replace("R$", "").replace(".", "").replace(",", ".").strip()
-    try:
-        total_float = float(preco_limpo)
-        parcela_float = total_float / 18
-        
-        txt_total = f"R$ {total_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        txt_parcela = f"{parcela_float:.2f}".replace(".", ",")
-        
-        produtos_etiquetas.append({
-            "nome": nome_prod,
-            "total": txt_total,
-            "parcela": txt_parcela
-        })
-    except:
-        continue
+            txt_total = f"R$ {total_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            txt_parcela = f"{parcela_float:.2f}".replace(".", ",")
+            
+            produtos_etiquetas.append({
+                "nome": nome_prod,
+                "total": txt_total,
+                "parcela": txt_parcela
+            })
+        except:
+            continue
 
 if produtos_etiquetas:
-    st.success(f"{len(produtos_etiquetas)} etiquetas geradas com sucesso.")
+    st.success(f"Sucesso! {len(produtos_etiquetas)} etiquetas prontas para gerar.")
+    st.table(produtos_etiquetas)
     
-    # Motor de desenho manual vetorial corrigido
+    # Motor de desenho manual vetorial com ampliação e destaque máximo
     pdf_buffer = io.BytesIO()
     c = canvas.Canvas(pdf_buffer, pagesize=letter)
     
-    # Medidas das etiquetas (Grade 3x4 = 12 por página)
+    # Medidas oficiais das etiquetas (Grade 3x4 = 12 por página)
     LARGURA_ET = 5.8 * 28.346
     ALTURA_ET = 5.4 * 28.346
     
@@ -80,85 +82,82 @@ if produtos_etiquetas:
     ESPACO_X = 12
     ESPACO_Y = 18
     
-    # Cores exatas extraídas da imagem
-    COR_LARANJA = HexColor("#FF3B00")  # Vermelho/Laranja de fundo
-    COR_AMARELO = HexColor("#FFB300")   # Círculo do 18X
+    # Cores Ajustadas: Laranja mais aberto/claro e chamativo
+    COR_LARANJA_CLARO = HexColor("#FF6600")  # Laranja comercial limpo e aberto
+    COR_AMARELO_DESTAQUE = HexColor("#FFCC00") # Círculo do 18X expandido
     COR_PRETO = HexColor("#000000")
     COR_BRANCO = HexColor("#FFFFFF")
     
     x_atual = MARGEM_X
-    y_atual = letter[1] - MARGEM_Y - ALTURA_ET
+    y_atual = letter - MARGEM_Y - ALTURA_ET
     
     for idx, p in enumerate(produtos_etiquetas):
         if idx > 0 and idx % 12 == 0:
             c.showPage()
             x_atual = MARGEM_X
-            y_atual = letter[1] - MARGEM_Y - ALTURA_ET
+            y_atual = letter - MARGEM_Y - ALTURA_ET
         elif idx > 0 and idx % 3 == 0:
             x_atual = MARGEM_X
             y_atual -= (ALTURA_ET + ESPACO_Y)
             
-        # 1. Fundo geral da etiqueta (Laranja com cantos arredondados)
-        c.setFillColor(COR_LARANJA)
-        c.setStrokeColor(COR_LARANJA)
+        # 1. Fundo geral da etiqueta (Laranja claro e limpo)
+        c.setFillColor(COR_LARANJA_CLARO)
+        c.setStrokeColor(COR_LARANJA_CLARO)
         c.roundRect(x_atual, y_atual, LARGURA_ET, ALTURA_ET, 10, fill=True, stroke=True)
         
-        # 2. Caixa branca do topo (Nome do Produto)
+        # 2. Caixa branca do topo (Nome do Produto ampliado)
         c.setFillColor(COR_BRANCO)
         c.setStrokeColor(COR_PRETO)
-        c.setLineWidth(0.5)
+        c.setLineWidth(0.6)
         c.roundRect(x_atual + 8, y_atual + ALTURA_ET - 32, LARGURA_ET - 16, 24, 6, fill=True, stroke=True)
         
-        # Texto do produto centralizado na caixinha branca
         c.setFillColor(COR_PRETO)
-        c.setFont("Helvetica-Bold", 8)
+        c.setFont("Helvetica-Bold", 8.5)
         c.drawCentredString(x_atual + (LARGURA_ET / 2), y_atual + ALTURA_ET - 22, p['nome'])
         
-        # 3. Círculo Amarelo do "18X" à esquerda
-        c.setFillColor(COR_AMARELO)
+        # 3. Círculo Amarelo Expandido do "18X" (Maior destaque à esquerda)
+        c.setFillColor(COR_AMARELO_DESTAQUE)
         c.setStrokeColor(COR_BRANCO)
-        c.setLineWidth(1)
-        c.circle(x_atual + 24, y_atual + 56, 12, fill=True, stroke=True)
+        c.setLineWidth(1.2)
+        c.circle(x_atual + 26, y_atual + 54, 15, fill=True, stroke=True)
         
         c.setFillColor(COR_BRANCO)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawCentredString(x_atual + 24, y_atual + 53, "18X")
+        c.setFont("Helvetica-Bold", 12)
+        c.drawCentredString(x_atual + 26, y_atual + 50, "18X")
         
-        # 4. Valor da Parcela no centro
+        # 4. VALOR DA PARCELA GIGANTE E CENTRALIZADO (Eliminando espaço vazio)
         c.setFillColor(COR_PRETO)
-        c.setFont("Helvetica-Bold", 18)
-        c.drawString(x_atual + 58, y_atual + 48, p['parcela'])
+        c.setFont("Helvetica-Bold", 26)  # Fonte muito maior para chamar atenção
+        c.drawString(x_atual + 64, y_atual + 44, p['parcela'])
         
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(x_atual + 44, y_atual + 54, "R$")
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(x_atual + 48, y_atual + 56, "R$")
         
-        # 5. Selo à direita ("NO CARTÃO DE CRÉDITO") em linhas retas normais
+        # 5. Selo à direita ("NO CARTÃO DE CRÉDITO")
         c.setFillColor(COR_PRETO)
         c.setFont("Helvetica-Bold", 5.5)
-        c.drawString(x_atual + 116, y_atual + 56, "NO CARTÃO")
-        c.drawString(x_atual + 116, y_atual + 50, "DE CRÉDITO")
+        c.drawString(x_atual + 116, y_atual + 54, "NO CARTÃO")
+        c.drawString(x_atual + 116, y_atual + 48, "DE CRÉDITO")
         
-        # 6. Faixa Preta Horizontal Reta (Preço Total)
+        # 6. Faixa Preta Horizontal Reta (Preço Total Limpo e sem cortes)
         c.setFillColor(COR_PRETO)
         c.rect(x_atual, y_atual + 18, LARGURA_ET, 18, fill=True, stroke=False)
         
-        # Texto do preço original dentro da faixa preta
         c.setFillColor(COR_BRANCO)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(x_atual + 26, y_atual + 23, p['total'])
-        c.setFont("Helvetica-Bold", 6)
-        c.drawString(x_atual + 12, y_atual + 25, "R$")
-        
-        # Linha branca de rasura em cima do preço total
-        c.setStrokeColor(COR_BRANCO)
-        c.setLineWidth(1.2)
-        c.line(x_atual + 10, y_atual + 26, x_atual + 85, y_atual + 26)
-        
-        # 7. Texto "SEM JUROS" no Rodapé Laranja (Corrigido para escrita normal)
-        c.setFillColor(COR_PRETO)
         c.setFont("Helvetica-Bold", 11)
-        c.drawRightString(x_atual + LARGURA_ET - 12, y_atual + 8, "JUROS")
-        c.drawRightString(x_atual + LARGURA_ET - 12, y_atual + 18, "SEM")
+        c.drawString(x_atual + 24, y_atual + 23, p['total'])  # CORREGIDO: Sem nenhuma linha branca cruzando por cima!
+        
+        # 7. RODAPÉ OFICIAL: Logo MYMI STORE à esquerda e SEM JUROS à direita
+        c.setFillColor(COR_PRETO)
+        
+        # Logo da Loja integrada
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(x_atual + 10, y_atual + 5, "MYMI STORE")
+        
+        # Selo sem juros normalizado
+        c.setFont("Helvetica-Bold", 10)
+        c.drawRightString(x_atual + LARGURA_ET - 10, y_atual + 3, "JUROS")
+        c.drawRightString(x_atual + LARGURA_ET - 10, y_atual + 11, "SEM")
         
         x_atual += (LARGURA_ET + ESPACO_X)
         
@@ -167,9 +166,9 @@ if produtos_etiquetas:
     st.markdown("---")
     st.subheader("📥 Exportar Resultados")
     st.download_button(
-        label="📥 Baixar PDF de Etiquetas Oficial Corrigido (Grade 3x4)",
+        label="📥 Baixar PDF de Etiquetas Oficial MYMI STORE (Grade 3x4)",
         data=pdf_buffer.getvalue(),
-        file_name="folha_etiquetas_mymi_corrigida.pdf",
+        file_name="etiquetas_vitrine_mymi_store.pdf",
         mime="application/pdf",
         use_container_width=True
     )
