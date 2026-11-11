@@ -80,12 +80,12 @@ if produtos_etiquetas:
     COR_PRETO = colors.HexColor("#000000")
     COR_BRANCO = colors.HexColor("#FFFFFF")
     
-    # Definição Rígida de Estilos
+    # Definição Rígida de Estilos (Calibrados milimetricamente contra quebra de linha)
     style_nome = ParagraphStyle('E_Nome', fontName='Helvetica-Bold', fontSize=8, textColor=COR_PRETO, alignment=1, leading=9)
     style_18x = ParagraphStyle('E_18x', fontName='Helvetica-Bold', fontSize=12, textColor=COR_BRANCO, alignment=1, leading=12)
-    style_rs = ParagraphStyle('E_Rs', fontName='Helvetica-Bold', fontSize=10, textColor=COR_BRANCO, alignment=2, leading=10)
-    style_parcela = ParagraphStyle('E_Parc', fontName='Helvetica-Bold', fontSize=24, textColor=COR_BRANCO, alignment=0, leading=24)
-    style_selo = ParagraphStyle('E_Selo', fontName='Helvetica-Bold', fontSize=5.5, textColor=COR_PRETO, alignment=1, leading=6)
+    style_rs = ParagraphStyle('E_Rs', fontName='Helvetica-Bold', fontSize=9, textColor=COR_BRANCO, alignment=2, leading=10)
+    style_parcela = ParagraphStyle('E_Parc', fontName='Helvetica-Bold', fontSize=21, textColor=COR_BRANCO, alignment=0, leading=21) # Tamanho 21 evita quebra
+    style_selo = ParagraphStyle('E_Selo', fontName='Helvetica-Bold', fontSize=5, textColor=COR_PRETO, alignment=1, leading=5.5)
     style_total = ParagraphStyle('E_Total', fontName='Helvetica-Bold', fontSize=11, textColor=COR_BRANCO, alignment=0, leading=11)
     style_logo = ParagraphStyle('E_Logo', fontName='Helvetica-Bold', fontSize=9, textColor=COR_PRETO, alignment=0, leading=10)
     style_sem_juros = ParagraphStyle('E_SJ', fontName='Helvetica-Bold', fontSize=9, textColor=COR_PRETO, alignment=2, leading=10)
@@ -97,7 +97,7 @@ if produtos_etiquetas:
     
     for p in produtos_etiquetas:
         # 1. TOPO: Caixa branca arredondada do produto
-        tab_nome_branca = Table([[Paragraph(p['nome'], style_nome)]], colWidths=[LARGURA_ET - 16], rowHeights=[22])
+        tab_nome_branca = Table([[Paragraph(p['nome'], style_nome)]], colWidths=[LARGURA_ET - 16], rowHeights=[18])
         tab_nome_branca.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_BRANCO),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -107,7 +107,7 @@ if produtos_etiquetas:
             ('TOPPADDING', (0,0), (-1,-1), 0),
         ]))
         
-        tab_topo_laranja = Table([[tab_nome_branca]], colWidths=[LARGURA_ET], rowHeights=[30])
+        tab_topo_laranja = Table([[tab_nome_branca]], colWidths=[LARGURA_ET], rowHeights=[32])
         tab_topo_laranja.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -116,8 +116,8 @@ if produtos_etiquetas:
             ('TOPPADDING', (0,0), (-1,-1), 0),
         ]))
         
-        # 2. MEIO PRETO: Divisões de coluna rígidas
-        tab_balao_18x = Table([[Paragraph("18X", style_18x)]], colWidths=[30], rowHeights=[18])
+        # 2. MEIO PRETO: Divisões alargadas para o preço caber reto em uma linha só
+        tab_balao_18x = Table([[Paragraph("18X", style_18x)]], colWidths=[24], rowHeights=[18])
         tab_balao_18x.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_AMARELO),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -136,6 +136,8 @@ if produtos_etiquetas:
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ]))
         
         miolo_dados = [
@@ -146,13 +148,14 @@ if produtos_etiquetas:
             tab_selo_cartao
         ]
         
-        tab_meio_preto = Table([miolo_dados], colWidths=[32, 4, 18, 66, 44], rowHeights=[34])
+        # Colunas redistribuídas: aumentei o espaço do valor para 66 pontos
+        tab_meio_preto = Table([miolo_dados], colWidths=[26, 4, 18, 66, 44], rowHeights=[24])
         tab_meio_preto.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_PRETO),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+            ('LEFTPADDING', (0,0), (-1,-1), 2),
+            ('RIGHTPADDING', (0,0), (-1,-1), 2),
         ]))
         
         # 3. FAIXA DO PREÇO TOTAL: Barra limpa
@@ -170,7 +173,7 @@ if produtos_etiquetas:
             Paragraph("MYMI STORE", style_logo),
             Paragraph("SEM JUROS", style_sem_juros)
         ]
-        tab_rodape_laranja = Table([rodape_dados], colWidths=[LARGURA_ET * 0.55, LARGURA_ET * 0.45], rowHeights=[22])
+        tab_rodape_laranja = Table([rodape_dados], colWidths=[LARGURA_ET * 0.55, LARGURA_ET * 0.45], rowHeights=[20])
         tab_rodape_laranja.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), COR_LARANJA),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -186,7 +189,7 @@ if produtos_etiquetas:
             [tab_meio_preto],
             [tab_faixa_preco],
             [tab_rodape_laranja]
-        ], colWidths=[LARGURA_ET], rowHeights=[30, 34, 18, 22])
+        ], colWidths=[LARGURA_ET], rowHeights=[32, 24, 18, 20])
         
         etiqueta_montada.setStyle(TableStyle([
             ('BOX', (0,0), (-1,-1), 1.5, colors.HexColor("#FF8C00")),
